@@ -4,6 +4,12 @@ import UIKit
 
 typealias User = (firstName: String, lastName: String)
 
+protocol ViewOutput {
+    func displayCompleteUserName(user: User)
+    func prepareDashboardView()
+    func showError(withError error: Error?)
+}
+
 class View {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
@@ -17,7 +23,9 @@ class View {
     func loginButtonAction() {
         useCase?.signIn(email: emailTextField.text, password: passwordTextField.text)
     }
-    
+}
+
+extension View: ViewOutput {
     func displayCompleteUserName(user: User) {
         print("complete user Name : \(user.firstName) \(user.lastName)")
     }
@@ -31,10 +39,9 @@ class View {
         if let networkError = error as? SignInError {
             errorMessage = networkError.description
         }
-
+        
         print("error : \(errorMessage)")
     }
-    
 }
 
 protocol UseCaseInput {
@@ -42,9 +49,9 @@ protocol UseCaseInput {
 }
 
 class UseCase {
-    var view: View?
-    var network = Network()
-    var persistentStore = PersistentStore()
+    var view: ViewOutput?
+    var network: NetworkInput?
+    var persistentStore: PersistentStoreInput?
 
     fileprivate func validate(email: String, password: String) -> SignInError? {
         if email.isEmpty {
@@ -77,9 +84,9 @@ extension UseCase: UseCaseInput {
             return
         }
         
-        network.signInUser(email: email, password: password) { [weak self] (user) in
+        network?.signInUser(email: email, password: password) { [weak self] (user) in
             if let user = user {
-                self?.persistentStore.saveUser(user: user, completion: { [weak self] (error) in
+                self?.persistentStore?.saveUser(user: user, completion: { [weak self] (error) in
                     if let error = error {
                         self?.view?.showError(withError: error)
                     } else {
@@ -94,14 +101,22 @@ extension UseCase: UseCaseInput {
     }
 }
 
-class Network {
+protocol NetworkInput {
+    func signInUser(email: String, password: String, completion: (User?) -> Void)
+}
+
+class Network: NetworkInput {
     func signInUser(email: String, password: String, completion: (User?) -> Void) {
         // call Alamofire
         completion((firstName: "Rahim", lastName: "Ben"))
     }
 }
 
-class PersistentStore {
+protocol PersistentStoreInput {
+    func saveUser(user: User, completion: (Error?) -> Void)
+}
+
+class PersistentStore: PersistentStoreInput {
     func saveUser(user: User, completion: (Error?) -> Void) {
         completion(nil)
     }
