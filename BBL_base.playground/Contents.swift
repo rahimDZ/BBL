@@ -7,42 +7,15 @@ typealias User = (firstName: String, lastName: String)
 class View {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
-    
-    var network = Network()
-    var persistentStore = PersistentStore()
-    
+    var useCase = UseCase()
+
     init() {
         emailTextField.text = "toto@toto.fr"
         passwordTextField.text = "password"
     }
     
-    
     func loginButtonAction() {
-        
-        guard let email = emailTextField.text, let password = passwordTextField.text else {
-            showError(withError: nil)
-            return
-        }
-        
-        if let error = validate(email: email, password: password) {
-            showError(withError: error)
-            return
-        }
-        
-        network.signInUser(email: email, password: password) { [weak self] (user) in
-            if let user = user {
-                self?.persistentStore.saveUser(user: user, completion: { [weak self] (error) in
-                    if let error = error {
-                        self?.showError(withError: error)
-                    } else {
-                        self?.displayCompleteUserName(user: user)
-                        self?.prepareDashboardView()
-                    }
-                })
-            } else {
-                self?.showError(withError: SignInError.unknown)
-            }
-        }
+        useCase.signIn(email: emailTextField.text, password: passwordTextField.text)
     }
     
     func displayCompleteUserName(user: User) {
@@ -58,11 +31,45 @@ class View {
         if let networkError = error as? SignInError {
             errorMessage = networkError.description
         }
-        
+
         print("error : \(errorMessage)")
     }
     
-    private func validate(email: String, password: String) -> SignInError? {
+}
+
+class UseCase {
+    var view: View?
+    var network = Network()
+    var persistentStore = PersistentStore()
+
+    func signIn(email: String?, password: String?) {
+        guard let email = email, let password = password else {
+            view?.showError(withError: nil)
+            return
+        }
+        
+        if let error = validate(email: email, password: password) {
+            view?.showError(withError: error)
+            return
+        }
+        
+        network.signInUser(email: email, password: password) { [weak self] (user) in
+            if let user = user {
+                self?.persistentStore.saveUser(user: user, completion: { [weak self] (error) in
+                    if let error = error {
+                        self?.view?.showError(withError: error)
+                    } else {
+                        self?.view?.displayCompleteUserName(user: user)
+                        self?.view?.prepareDashboardView()
+                    }
+                })
+            } else {
+                self?.view?.showError(withError: SignInError.unknown)
+            }
+        }
+    }
+
+    func validate(email: String, password: String) -> SignInError? {
         if email.isEmpty {
             return .missingEmail
         }
