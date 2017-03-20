@@ -7,14 +7,42 @@ typealias User = (firstName: String, lastName: String)
 class View {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
-
+    
+    var network = Network()
+    var persistentStore = PersistentStore()
+    
     init() {
         emailTextField.text = "toto@toto.fr"
         passwordTextField.text = "password"
     }
     
+    
     func loginButtonAction() {
         
+        guard let email = emailTextField.text, let password = passwordTextField.text else {
+            showError(withError: nil)
+            return
+        }
+        
+        if let error = validate(email: email, password: password) {
+            showError(withError: error)
+            return
+        }
+        
+        network.signInUser(email: email, password: password) { [weak self] (user) in
+            if let user = user {
+                self?.persistentStore.saveUser(user: user, completion: { [weak self] (error) in
+                    if let error = error {
+                        self?.showError(withError: error)
+                    } else {
+                        self?.displayCompleteUserName(user: user)
+                        self?.prepareDashboardView()
+                    }
+                })
+            } else {
+                self?.showError(withError: SignInError.unknown)
+            }
+        }
     }
     
     func displayCompleteUserName(user: User) {
@@ -25,12 +53,12 @@ class View {
         print("prepare dashboard view")
     }
     
-    func showError(withError error: Error) {
+    func showError(withError error: Error?) {
         var errorMessage = "generic error"
         if let networkError = error as? SignInError {
             errorMessage = networkError.description
         }
-
+        
         print("error : \(errorMessage)")
     }
     
@@ -54,7 +82,7 @@ class View {
 }
 
 class Network {
-    func signInUser(email: String, password: String, completion: (User) -> Void) {
+    func signInUser(email: String, password: String, completion: (User?) -> Void) {
         // call Alamofire
         completion((firstName: "Rahim", lastName: "Ben"))
     }
