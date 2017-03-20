@@ -7,7 +7,7 @@ typealias User = (firstName: String, lastName: String)
 class View {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
-    var useCase = UseCase()
+    var useCase: UseCaseInput?
 
     init() {
         emailTextField.text = "toto@toto.fr"
@@ -15,7 +15,7 @@ class View {
     }
     
     func loginButtonAction() {
-        useCase.signIn(email: emailTextField.text, password: passwordTextField.text)
+        useCase?.signIn(email: emailTextField.text, password: passwordTextField.text)
     }
     
     func displayCompleteUserName(user: User) {
@@ -37,11 +37,35 @@ class View {
     
 }
 
+protocol UseCaseInput {
+    func signIn(email: String?, password: String?)
+}
+
 class UseCase {
     var view: View?
     var network = Network()
     var persistentStore = PersistentStore()
 
+    fileprivate func validate(email: String, password: String) -> SignInError? {
+        if email.isEmpty {
+            return .missingEmail
+        }
+        if password.isEmpty {
+            return .missingPassword
+        }
+        
+        if !email.contains("@") {
+            return .badEmailFormat
+        }
+        if password.characters.count < 5 {
+            return .badPasswordFormat
+        }
+        
+        return nil
+    }
+}
+
+extension UseCase: UseCaseInput {
     func signIn(email: String?, password: String?) {
         guard let email = email, let password = password else {
             view?.showError(withError: nil)
@@ -67,24 +91,6 @@ class UseCase {
                 self?.view?.showError(withError: SignInError.unknown)
             }
         }
-    }
-
-    func validate(email: String, password: String) -> SignInError? {
-        if email.isEmpty {
-            return .missingEmail
-        }
-        if password.isEmpty {
-            return .missingPassword
-        }
-        
-        if !email.contains("@") {
-            return .badEmailFormat
-        }
-        if password.characters.count < 5 {
-            return .badPasswordFormat
-        }
-        
-        return nil
     }
 }
 
