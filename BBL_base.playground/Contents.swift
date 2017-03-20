@@ -4,16 +4,19 @@ import UIKit
 
 typealias User = (firstName: String, lastName: String)
 
+
+// VIEW
+
+
 protocol ViewOutput {
-    func displayCompleteUserName(user: User)
-    func prepareDashboardView()
-    func showError(withError error: Error?)
+    func displayCompleteUserName(completeUserName: String)
+    func showError(withErrorMessage errorMessage: String)
 }
 
 class View {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
-    var useCase: UseCaseInput?
+    var presenter: PresenterInput?
 
     init() {
         emailTextField.text = "toto@toto.fr"
@@ -21,17 +24,67 @@ class View {
     }
     
     func loginButtonAction() {
-        useCase?.signIn(email: emailTextField.text, password: passwordTextField.text)
+        presenter?.userDidClickedLoginButton(email: emailTextField.text, password: passwordTextField.text)
     }
 }
 
 extension View: ViewOutput {
+    func displayCompleteUserName(completeUserName: String) {
+        print("complete user Name : \(completeUserName)")
+    }
+    
+    func showError(withErrorMessage errorMessage: String) {
+        print("error : \(errorMessage)")
+    }
+}
+
+
+// WIREFRAME
+
+
+protocol WireframeInput {
+    func presentDashboardView()
+}
+
+class Wireframe: WireframeInput {
+    func presentDashboardView() {
+        print("prepare dashboard view")
+    }
+}
+
+
+// PRESENTER
+
+
+protocol PresenterInput {
+    func userDidClickedLoginButton(email: String?, password: String?)
+}
+
+protocol PresenterOutput {
+    func displayCompleteUserName(user: User)
+    func prepareDashboardView()
+    func showError(withError error: Error?)
+}
+
+class Presenter {
+    var view: ViewOutput?
+    var useCase: UseCaseInput?
+    var wireframe: WireframeInput?
+}
+
+extension Presenter: PresenterInput {
+    func userDidClickedLoginButton(email: String?, password: String?) {
+        useCase?.signIn(email: email, password: password)
+    }
+}
+
+extension Presenter: PresenterOutput {
     func displayCompleteUserName(user: User) {
-        print("complete user Name : \(user.firstName) \(user.lastName)")
+        view?.displayCompleteUserName(completeUserName: "\(user.firstName) \(user.lastName)")
     }
     
     func prepareDashboardView() {
-        print("prepare dashboard view")
+        wireframe?.presentDashboardView()
     }
     
     func showError(withError error: Error?) {
@@ -39,19 +92,28 @@ extension View: ViewOutput {
         if let networkError = error as? SignInError {
             errorMessage = networkError.description
         }
-        
-        print("error : \(errorMessage)")
+        view?.showError(withErrorMessage: errorMessage)
     }
 }
+
+
+// USECASE
+
 
 protocol UseCaseInput {
     func signIn(email: String?, password: String?)
 }
 
 class UseCase {
-    var view: ViewOutput?
+    var presenter: PresenterOutput?
     var network: NetworkInput?
     var persistentStore: PersistentStoreInput?
+    
+    init(presenter: PresenterOutput, network: NetworkInput, persistentStore: PersistentStoreInput) {
+        self.presenter = presenter
+        self.network = network
+        self.persistentStore = persistentStore
+    }
 
     fileprivate func validate(email: String, password: String) -> SignInError? {
         if email.isEmpty {
@@ -75,12 +137,12 @@ class UseCase {
 extension UseCase: UseCaseInput {
     func signIn(email: String?, password: String?) {
         guard let email = email, let password = password else {
-            view?.showError(withError: nil)
+            presenter?.showError(withError: nil)
             return
         }
         
         if let error = validate(email: email, password: password) {
-            view?.showError(withError: error)
+            presenter?.showError(withError: error)
             return
         }
         
@@ -88,18 +150,22 @@ extension UseCase: UseCaseInput {
             if let user = user {
                 self?.persistentStore?.saveUser(user: user, completion: { [weak self] (error) in
                     if let error = error {
-                        self?.view?.showError(withError: error)
+                        self?.presenter?.showError(withError: error)
                     } else {
-                        self?.view?.displayCompleteUserName(user: user)
-                        self?.view?.prepareDashboardView()
+                        self?.presenter?.displayCompleteUserName(user: user)
+                        self?.presenter?.prepareDashboardView()
                     }
                 })
             } else {
-                self?.view?.showError(withError: SignInError.unknown)
+                self?.presenter?.showError(withError: SignInError.unknown)
             }
         }
     }
 }
+
+
+// NETWORK
+
 
 protocol NetworkInput {
     func signInUser(email: String, password: String, completion: (User?) -> Void)
@@ -112,6 +178,10 @@ class Network: NetworkInput {
     }
 }
 
+
+// PERSISTENT STORE
+
+
 protocol PersistentStoreInput {
     func saveUser(user: User, completion: (Error?) -> Void)
 }
@@ -121,6 +191,10 @@ class PersistentStore: PersistentStoreInput {
         completion(nil)
     }
 }
+
+
+// UTILS
+
 
 enum SignInError: Error {
     case missingEmail, missingPassword, badEmailFormat, badPasswordFormat, unknown
@@ -140,3 +214,45 @@ enum SignInError: Error {
         }
     }
 }
+
+// TESTS
+
+// #MOCKING
+
+class PresenterMock: PresenterOutput {
+    
+    var didDisplayCompleteUserName: Bool = false
+    var didPrepareDashboardView: Bool = false
+    var didShowError: Bool = false
+    
+    func displayCompleteUserName(user: User) {
+        self.didDisplayCompleteUserName = true
+    }
+    
+    func prepareDashboardView() {
+        self.didPrepareDashboardView = true
+    }
+    
+    func showError(withError error: Error?) {
+        self.didShowError = true
+    }
+}
+
+class NetworkMock: NetworkInput {
+    func signInUser(email: String, password: String, completion: (User?) -> Void) {
+        // call Alamofire
+        completion((firstName: "Rahim", lastName: "Ben"))
+    }
+}
+
+class PersistentStoreMock: PersistentStoreInput {
+    func saveUser(user: User, completion: (Error?) -> Void) {
+        completion(nil)
+    }
+}
+
+let networkMock = NetworkMock()
+let databaseMock = PersistentStoreMock()
+let presenterMock = PresenterMock()
+let useCase = UseCase(presenter: presenterMock, network: networkMock, persistentStore: databaseMock)
+
