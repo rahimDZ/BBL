@@ -4,14 +4,15 @@ import UIKit
 
 typealias User = (firstName: String, lastName: String)
 
-class View {
+class View: UIViewController {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
     
     var network = Network()
     var persistentStore = PersistentStore()
     
-    init() {
+    override func viewDidLoad() {
+        super.viewDidLoad()
         emailTextField.text = "toto@toto.fr"
         passwordTextField.text = "password"
     }
@@ -35,22 +36,14 @@ class View {
                     if let error = error {
                         self?.showError(withError: error)
                     } else {
-                        self?.displayCompleteUserName(user: user)
-                        self?.prepareDashboardView()
+                        print("complete user Name : \(user.firstName) \(user.lastName)")
+                        self?.performSegue(withIdentifier: "DashboardSegueIdentifier", sender: nil)
                     }
                 })
             } else {
                 self?.showError(withError: SignInError.unknown)
             }
         }
-    }
-    
-    func displayCompleteUserName(user: User) {
-        print("complete user Name : \(user.firstName) \(user.lastName)")
-    }
-    
-    func prepareDashboardView() {
-        print("prepare dashboard view")
     }
     
     func showError(withError error: Error?) {
@@ -112,3 +105,4 @@ enum SignInError: Error {
         }
     }
 }
+
