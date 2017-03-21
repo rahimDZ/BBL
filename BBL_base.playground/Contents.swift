@@ -10,12 +10,13 @@ protocol ViewOutput {
     func showError(withError error: Error?)
 }
 
-class View {
+class View: UIViewController {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
     var useCase: UseCaseInput?
 
-    init() {
+    override func viewDidLoad() {
+        super.viewDidLoad()
         emailTextField.text = "toto@toto.fr"
         passwordTextField.text = "password"
     }
@@ -52,6 +53,12 @@ class UseCase {
     var view: ViewOutput?
     var network: NetworkInput?
     var persistentStore: PersistentStoreInput?
+    
+    init(view: ViewOutput, network: NetworkInput, persistentStore: PersistentStoreInput) {
+        self.view = view
+        self.network = network
+        self.persistentStore = persistentStore
+    }
 
     fileprivate func validate(email: String, password: String) -> SignInError? {
         if email.isEmpty {
@@ -140,3 +147,63 @@ enum SignInError: Error {
         }
     }
 }
+
+// MOCK
+
+class ViewMock: ViewOutput {
+    var useCase: UseCaseInput?
+    
+    var didDisplayCompleteUserName: Bool = false
+    var didPrepareDashboardView: Bool = false
+    var didShowError: Bool = false
+
+    func displayCompleteUserName(user: User) {
+        self.didDisplayCompleteUserName = true
+    }
+    
+    func prepareDashboardView() {
+        self.didPrepareDashboardView = true
+    }
+    
+    func showError(withError error: Error?) {
+        self.didShowError = true
+    }
+}
+
+class NetworkMock: NetworkInput {
+    func signInUser(email: String, password: String, completion: (User?) -> Void) {
+        completion((firstName: "Rahim", lastName: "Ben"))
+    }
+}
+
+class PersistentStoreMock: PersistentStoreInput {
+    func saveUser(user: User, completion: (Error?) -> Void) {
+        completion(nil)
+    }
+}
+
+
+let view = ViewMock()
+let useCase = UseCase(view: view, network: NetworkMock(), persistentStore: PersistentStoreMock())
+view.useCase = useCase
+useCase.view = view
+useCase.signIn(email: "toto@toto.fr", password: "dozkdozkdoz")
+if view.didDisplayCompleteUserName {
+    print("didDisplayCompleteUserName : SUCCESS")
+} else {
+    print("didDisplayCompleteUserName : FAILURE")
+}
+
+if view.didPrepareDashboardView {
+    print("didPrepareDashboardView : SUCCESS")
+} else {
+    print("didPrepareDashboardView : FAILURE")
+}
+
+if view.didShowError {
+    print("didShowError : SUCCESS")
+} else {
+    print("didShowError : FAILURE")
+}
+
+
