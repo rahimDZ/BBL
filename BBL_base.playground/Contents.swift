@@ -4,10 +4,16 @@ import UIKit
 
 typealias User = (firstName: String, lastName: String)
 
+protocol ViewOutput {
+    func displayCompleteUserName(user: User)
+    func prepareDashboardView()
+    func showError(withError error: Error?)
+}
+
 class View {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
-    var useCase: UseCaseInput?
+    var useCase = UseCase()
 
     init() {
         emailTextField.text = "toto@toto.fr"
@@ -15,9 +21,11 @@ class View {
     }
     
     func loginButtonAction() {
-        useCase?.signIn(email: emailTextField.text, password: passwordTextField.text)
+        useCase.signIn(email: emailTextField.text, password: passwordTextField.text)
     }
-    
+}
+
+extension View: ViewOutput {
     func displayCompleteUserName(user: User) {
         print("complete user Name : \(user.firstName) \(user.lastName)")
     }
@@ -31,41 +39,16 @@ class View {
         if let networkError = error as? SignInError {
             errorMessage = networkError.description
         }
-
+        
         print("error : \(errorMessage)")
     }
-    
-}
-
-protocol UseCaseInput {
-    func signIn(email: String?, password: String?)
 }
 
 class UseCase {
-    var view: View?
+    var view: ViewOutput?
     var network = Network()
     var persistentStore = PersistentStore()
 
-    fileprivate func validate(email: String, password: String) -> SignInError? {
-        if email.isEmpty {
-            return .missingEmail
-        }
-        if password.isEmpty {
-            return .missingPassword
-        }
-        
-        if !email.contains("@") {
-            return .badEmailFormat
-        }
-        if password.characters.count < 5 {
-            return .badPasswordFormat
-        }
-        
-        return nil
-    }
-}
-
-extension UseCase: UseCaseInput {
     func signIn(email: String?, password: String?) {
         guard let email = email, let password = password else {
             view?.showError(withError: nil)
@@ -91,6 +74,24 @@ extension UseCase: UseCaseInput {
                 self?.view?.showError(withError: SignInError.unknown)
             }
         }
+    }
+
+    fileprivate func validate(email: String, password: String) -> SignInError? {
+        if email.isEmpty {
+            return .missingEmail
+        }
+        if password.isEmpty {
+            return .missingPassword
+        }
+        
+        if !email.contains("@") {
+            return .badEmailFormat
+        }
+        if password.characters.count < 5 {
+            return .badPasswordFormat
+        }
+        
+        return nil
     }
 }
 
@@ -125,3 +126,49 @@ enum SignInError: Error {
         }
     }
 }
+
+// MOCK
+
+class ViewMock: ViewOutput {
+    var useCase = UseCase()
+    
+    var didDisplayCompleteUserName: Bool = false
+    var didPrepareDashboardView: Bool = false
+    var didShowError: Bool = false
+
+    func displayCompleteUserName(user: User) {
+        self.didDisplayCompleteUserName = true
+    }
+    
+    func prepareDashboardView() {
+        self.didPrepareDashboardView = true
+    }
+    
+    func showError(withError error: Error?) {
+        self.didShowError = true
+    }
+}
+
+let useCase = UseCase()
+let view = ViewMock()
+view.useCase = useCase
+useCase.view = view
+useCase.signIn(email: "toto@toto.fr", password: "dozkdozkdoz")
+if view.didDisplayCompleteUserName {
+    print("didDisplayCompleteUserName : SUCCESS")
+} else {
+    print("didDisplayCompleteUserName : FAILURE")
+}
+
+if view.didPrepareDashboardView {
+    print("didPrepareDashboardView : SUCCESS")
+} else {
+    print("didPrepareDashboardView : FAILURE")
+}
+
+if view.didShowError {
+    print("didShowError : SUCCESS")
+} else {
+    print("didShowError : FAILURE")
+}
+
