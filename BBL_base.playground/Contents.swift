@@ -119,3 +119,11 @@ enum SignInError: Error {
         }
     }
 }
+
+let useCase = UseCase()
+let view = View()
+view.useCase = useCase
+useCase.view = view
+useCase.signIn(email: "toto@toto.fr", password: "dozkdozkdoz")
+// expect view.prepareDashboardView()
+
