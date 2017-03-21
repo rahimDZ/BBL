@@ -4,12 +4,13 @@ import UIKit
 
 typealias User = (firstName: String, lastName: String)
 
-class View {
+class View: UIViewController {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
     var useCase = UseCase()
 
-    init() {
+    override func viewDidLoad() {
+        super.viewDidLoad()
         emailTextField.text = "toto@toto.fr"
         passwordTextField.text = "password"
     }
