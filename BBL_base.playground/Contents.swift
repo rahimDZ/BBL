@@ -251,8 +251,23 @@ class PersistentStoreMock: PersistentStoreInput {
     }
 }
 
-let networkMock = NetworkMock()
-let databaseMock = PersistentStoreMock()
-let presenterMock = PresenterMock()
-let useCase = UseCase(presenter: presenterMock, network: networkMock, persistentStore: databaseMock)
+let view = PresenterMock()
+let useCase = UseCase(presenter: view, network: NetworkMock(), persistentStore: PersistentStoreMock())
+useCase.signIn(email: "toto@toto.fr", password: "dozkdozkdoz")
+if view.didDisplayCompleteUserName {
+    print("didDisplayCompleteUserName : SUCCESS")
+} else {
+    print("didDisplayCompleteUserName : FAILURE")
+}
 
+if view.didPrepareDashboardView {
+    print("didPrepareDashboardView : SUCCESS")
+} else {
+    print("didPrepareDashboardView : FAILURE")
+}
+
+if view.didShowError {
+    print("didShowError : SUCCESS")
+} else {
+    print("didShowError : FAILURE")
+}
