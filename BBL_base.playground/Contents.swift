@@ -13,17 +13,18 @@ protocol ViewOutput {
     func showError(withErrorMessage errorMessage: String)
 }
 
-class View {
+class View: UIViewController {
     var emailTextField = UITextField()
     var passwordTextField = UITextField()
     var presenter: PresenterInput?
-
-    init() {
+    
+    override func viewDidLoad() {
+        super.viewDidLoad()
         emailTextField.text = "toto@toto.fr"
         passwordTextField.text = "password"
     }
     
-    func loginButtonAction() {
+    @IBAction func loginButtonAction(sender: UIButton) {
         presenter?.userDidClickedLoginButton(email: emailTextField.text, password: passwordTextField.text)
     }
 }
