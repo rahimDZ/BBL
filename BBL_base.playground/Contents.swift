@@ -20,7 +20,7 @@ class View {
         passwordTextField.text = "password"
     }
     
-    func loginButtonAction() {
+    @IBAction func loginButtonAction(sender: UIButton) {
         useCase.signIn(email: emailTextField.text, password: passwordTextField.text)
     }
 }
