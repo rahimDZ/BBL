@@ -18,7 +18,7 @@ class View: UIViewController {
     }
     
     
-    func loginButtonAction() {
+    @IBAction func loginButtonAction(sender: UIButton) {
         
         guard let email = emailTextField.text, let password = passwordTextField.text else {
             showError(withError: nil)
